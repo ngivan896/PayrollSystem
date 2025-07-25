@@ -11,7 +11,12 @@ import java.awt.event.ActionEvent;
 import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
 import javax.swing.border.EmptyBorder;
+import javax.rmi.ssl.SslRMIClientSocketFactory;
 
+/**
+ * PayrollClient is the main client application for the Payroll System.
+ * Provides GUI for login, registration, dashboard, payroll, and reports.
+ */
 public class PayrollClient {
     private EmployeeService employeeService;
     private PayrollService payrollService;
@@ -24,8 +29,13 @@ public class PayrollClient {
             System.err.println("Failed to set system look and feel");
         }
         try {
-            Registry registry = LocateRegistry.getRegistry("localhost", 1099);
-            System.out.println("Connected to RMI registry");
+            // TLS/SSL 配置（请确保 server.keystore 文件已复制到客户端，并密码正确）
+            System.setProperty("javax.net.ssl.trustStore", "server.keystore");
+            System.setProperty("javax.net.ssl.trustStorePassword", "abcd123");
+            Registry registry = LocateRegistry.getRegistry(
+                "192.168.0.5", 1099, new SslRMIClientSocketFactory()
+            );
+            System.out.println("Connected to RMI registry (TLS/SSL)");
             employeeService = (EmployeeService) registry.lookup("EmployeeService");
             System.out.println("EmployeeService lookup success");
             payrollService = (PayrollService) registry.lookup("PayrollService");
@@ -38,6 +48,9 @@ public class PayrollClient {
         showLoginFrame();
     }
 
+    /**
+     * Shows the login window and handles user login.
+     */
     private void showLoginFrame() {
         JFrame frame = new JFrame("Payroll System - Login");
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
@@ -94,6 +107,15 @@ public class PayrollClient {
         loginBtn.addActionListener((ActionEvent e) -> {
             String username = usernameField.getText();
             String password = new String(passwordField.getPassword());
+            // 输入校验
+            if (username == null || username.trim().isEmpty()) {
+                JOptionPane.showMessageDialog(frame, "Username cannot be empty!", "Input Error", JOptionPane.WARNING_MESSAGE);
+                return;
+            }
+            if (password == null || password.trim().isEmpty()) {
+                JOptionPane.showMessageDialog(frame, "Password cannot be empty!", "Input Error", JOptionPane.WARNING_MESSAGE);
+                return;
+            }
             System.out.println("Login button clicked: " + username + " / " + password);
             try {
                 Employee emp = employeeService.login(username, password);
@@ -116,6 +138,9 @@ public class PayrollClient {
         frame.setVisible(true);
     }
 
+    /**
+     * Shows the registration window for new employees.
+     */
     private void showRegisterFrame() {
         JFrame frame = new JFrame("Payroll System - Register");
         frame.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
@@ -186,12 +211,38 @@ public class PayrollClient {
         frame.add(copyright, BorderLayout.SOUTH);
 
         submitBtn.addActionListener((ActionEvent e) -> {
+            String username = usernameField.getText();
+            String password = new String(passwordField.getPassword());
+            String firstName = firstNameField.getText();
+            String lastName = lastNameField.getText();
+            String icPassport = icPassportField.getText();
+            // 输入校验
+            if (username == null || username.trim().isEmpty()) {
+                JOptionPane.showMessageDialog(frame, "Username cannot be empty!", "Input Error", JOptionPane.WARNING_MESSAGE);
+                return;
+            }
+            if (password == null || password.trim().isEmpty()) {
+                JOptionPane.showMessageDialog(frame, "Password cannot be empty!", "Input Error", JOptionPane.WARNING_MESSAGE);
+                return;
+            }
+            if (firstName == null || firstName.trim().isEmpty()) {
+                JOptionPane.showMessageDialog(frame, "First name cannot be empty!", "Input Error", JOptionPane.WARNING_MESSAGE);
+                return;
+            }
+            if (lastName == null || lastName.trim().isEmpty()) {
+                JOptionPane.showMessageDialog(frame, "Last name cannot be empty!", "Input Error", JOptionPane.WARNING_MESSAGE);
+                return;
+            }
+            if (icPassport == null || icPassport.trim().isEmpty()) {
+                JOptionPane.showMessageDialog(frame, "IC/Passport cannot be empty!", "Input Error", JOptionPane.WARNING_MESSAGE);
+                return;
+            }
             Employee emp = new Employee();
-            emp.setUsername(usernameField.getText());
-            emp.setPassword(new String(passwordField.getPassword()));
-            emp.setFirstName(firstNameField.getText());
-            emp.setLastName(lastNameField.getText());
-            emp.setIcPassport(icPassportField.getText());
+            emp.setUsername(username);
+            emp.setPassword(password);
+            emp.setFirstName(firstName);
+            emp.setLastName(lastName);
+            emp.setIcPassport(icPassport);
             System.out.println("Register button clicked: " + emp.getUsername());
             try {
                 boolean ok = employeeService.register(emp);
@@ -211,6 +262,10 @@ public class PayrollClient {
         frame.setVisible(true);
     }
 
+    /**
+     * Shows the main dashboard after successful login.
+     * @param emp The logged-in Employee
+     */
     private void showDashboard(Employee emp) {
         JFrame frame = new JFrame("Payroll System - Dashboard");
         frame.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
@@ -556,6 +611,12 @@ public class PayrollClient {
         frame.setVisible(true);
     }
 
+    /**
+     * Creates a card component for the dashboard.
+     * @param title Card title
+     * @param desc Card description
+     * @return JPanel representing the card
+     */
     private JPanel createCard(String title, String desc) {
         JPanel card = new JPanel();
         card.setPreferredSize(new Dimension(220, 110));
@@ -583,9 +644,16 @@ public class PayrollClient {
         return card;
     }
 
+    /**
+     * Shows the user settings dialog for updating profile.
+     * @param parent Parent JFrame
+     * @param emp Employee object
+     * @param welcome Welcome label to update
+     * @param userBtn User button to update
+     */
     private void showSettingDialog(JFrame parent, Employee emp, JLabel welcome, JButton userBtn) {
         JDialog dialog = new JDialog(parent, "User Settings", true);
-        dialog.setSize(350, 300);
+        dialog.setSize(500, 300); // 增大窗口宽度
         dialog.setLocationRelativeTo(parent);
         dialog.setLayout(new BorderLayout());
 
@@ -597,16 +665,16 @@ public class PayrollClient {
 
         JLabel firstNameLabel = new JLabel("First Name:");
         JTextField firstNameField = new JTextField(emp.getFirstName(), 16);
-        firstNameField.setPreferredSize(new Dimension(220, 28));
+        firstNameField.setPreferredSize(new Dimension(350, 28)); // 增大输入框宽度
         JLabel lastNameLabel = new JLabel("Last Name:");
         JTextField lastNameField = new JTextField(emp.getLastName(), 16);
-        lastNameField.setPreferredSize(new Dimension(220, 28));
+        lastNameField.setPreferredSize(new Dimension(350, 28)); // 增大输入框宽度
         JLabel icPassportLabel = new JLabel("IC/Passport:");
         JTextField icPassportField = new JTextField(emp.getIcPassport(), 16);
-        icPassportField.setPreferredSize(new Dimension(220, 28));
+        icPassportField.setPreferredSize(new Dimension(350, 28)); // 增大输入框宽度
         JLabel passwordLabel = new JLabel("New Password:");
         JPasswordField passwordField = new JPasswordField(16);
-        passwordField.setPreferredSize(new Dimension(220, 28));
+        passwordField.setPreferredSize(new Dimension(350, 28)); // 增大输入框宽度
         JButton saveBtn = new JButton("Save");
         saveBtn.setPreferredSize(new Dimension(120, 32));
         saveBtn.setFont(new Font("Segoe UI", Font.PLAIN, 15));
@@ -660,6 +728,10 @@ public class PayrollClient {
         dialog.setVisible(true);
     }
 
+    /**
+     * Shows the payroll records window for the employee.
+     * @param emp Employee object
+     */
     private void showPayrollWindow(Employee emp) {
         JFrame frame = new JFrame("Payroll Records");
         frame.setSize(650, 420);
@@ -728,6 +800,10 @@ public class PayrollClient {
         frame.setVisible(true);
     }
 
+    /**
+     * Shows the payroll reports window.
+     * @param emp Employee object
+     */
     private void showReportWindow(Employee emp) {
         JFrame frame = new JFrame("Payroll Reports");
         frame.setSize(750, 420);
@@ -834,6 +910,9 @@ public class PayrollClient {
         frame.setVisible(true);
     }
 
+    /**
+     * Shows the employee management window (admin only).
+     */
     private void showEmployeeManagementWindow() {
         JFrame frame = new JFrame("Employee Management");
         frame.setSize(800, 480);
@@ -984,6 +1063,10 @@ public class PayrollClient {
         frame.setVisible(true);
     }
 
+    /**
+     * Shows the admin payroll generation window.
+     * @param emp Admin Employee object
+     */
     private void showAdminPayrollWindow(Employee emp) {
         JFrame frame = new JFrame("Admin Payroll Generation");
         frame.setSize(650, 450);
@@ -1132,7 +1215,11 @@ public class PayrollClient {
         frame.setVisible(true);
     }
 
-    // 工具方法
+    /**
+     * Utility method to parse a string to double, returns 0.0 if invalid.
+     * @param text Input string
+     * @return Parsed double value or 0.0
+     */
     private double parseOrZero(String text) {
         try {
             return Double.parseDouble(text.trim());
