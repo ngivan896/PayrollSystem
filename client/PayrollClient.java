@@ -39,18 +39,22 @@ public class PayrollClient {
             e.printStackTrace();
             System.exit(1);
         }
+        System.out.println("[CLIENT] About to show login frame...");
         showLoginFrame();
+        System.out.println("[CLIENT] Login frame method completed.");
     }
 
     /**
      * Shows the login window and handles user login.
      */
     private void showLoginFrame() {
+        System.out.println("[CLIENT] Creating login frame...");
         JFrame frame = new JFrame("Payroll System - Login");
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         frame.setSize(400, 300);
         frame.setLocationRelativeTo(null);
         frame.setLayout(new BorderLayout());
+        System.out.println("[CLIENT] Login frame created, size: " + frame.getSize());
 
         JLabel title = new JLabel("Payroll System", SwingConstants.CENTER);
         title.setFont(new Font("Segoe UI", Font.BOLD, 22));
@@ -129,7 +133,9 @@ public class PayrollClient {
 
         registerBtn.addActionListener((ActionEvent e) -> showRegisterFrame());
 
+        System.out.println("[CLIENT] Setting frame visible...");
         frame.setVisible(true);
+        System.out.println("[CLIENT] Frame should now be visible. Frame state: " + frame.isVisible());
     }
 
     /**
