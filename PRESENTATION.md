@@ -120,6 +120,69 @@ public class EmployeeServiceImpl implements EmployeeService {
 }
 ```
 
+### 3.4 多表查询示例
+```java
+// 查询员工信息和工资记录
+public List<PayrollRecord> getEmployeePayrollHistory(int employeeId) throws RemoteException {
+    try (Connection conn = DatabaseConnection.getConnection()) {
+        String sql = """
+            SELECT e.username, e.firstName, e.lastName, 
+                   p.period, p.baseSalary, p.grossPay, p.netPay
+            FROM Employee e
+            JOIN Payroll p ON e.id = p.employeeId
+            WHERE e.id = ?
+            ORDER BY p.period DESC
+            """;
+        
+        try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setInt(1, employeeId);
+            ResultSet rs = stmt.executeQuery();
+            
+            List<PayrollRecord> records = new ArrayList<>();
+            while (rs.next()) {
+                PayrollRecord record = new PayrollRecord();
+                record.setEmployeeId(employeeId);
+                record.setPeriod(rs.getString("period"));
+                record.setBaseSalary(rs.getDouble("baseSalary"));
+                record.setGrossPay(rs.getDouble("grossPay"));
+                record.setNetPay(rs.getDouble("netPay"));
+                records.add(record);
+            }
+            return records;
+        }
+    }
+}
+
+// 查询部门工资统计
+public Map<String, Double> getDepartmentSalaryStats() throws RemoteException {
+    try (Connection conn = DatabaseConnection.getConnection()) {
+        String sql = """
+            SELECT e.role as department,
+                   COUNT(*) as employeeCount,
+                   AVG(p.baseSalary) as avgBaseSalary,
+                   SUM(p.grossPay) as totalGrossPay
+            FROM Employee e
+            LEFT JOIN Payroll p ON e.id = p.employeeId
+            WHERE p.period = ?
+            GROUP BY e.role
+            """;
+        
+        try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setString(1, java.time.YearMonth.now().toString());
+            ResultSet rs = stmt.executeQuery();
+            
+            Map<String, Double> stats = new HashMap<>();
+            while (rs.next()) {
+                String dept = rs.getString("department");
+                double avgSalary = rs.getDouble("avgBaseSalary");
+                stats.put(dept, avgSalary);
+            }
+            return stats;
+        }
+    }
+}
+```
+
 ---
 
 ## 4. 并发安全特性
@@ -240,8 +303,81 @@ PayrollSystem/
 └── server.keystore  # SSL证书
 ```
 
+## 11. 数据库表结构
+
+### 11.1 主要表
+```sql
+-- Employee表：员工信息
+CREATE TABLE Employee (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    username VARCHAR(255) UNIQUE,
+    password VARCHAR(255),
+    firstName VARCHAR(255),
+    lastName VARCHAR(255),
+    icPassport VARCHAR(255),
+    role VARCHAR(255)
+);
+
+-- Payroll表：工资记录
+CREATE TABLE Payroll (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    employeeId INT,
+    period VARCHAR(255),
+    baseSalary DOUBLE,
+    overtimeHours DOUBLE,
+    overtimeRate DOUBLE,
+    bonus DOUBLE,
+    allowance DOUBLE,
+    grossPay DOUBLE,
+    deductions DOUBLE,
+    netPay DOUBLE,
+    FOREIGN KEY (employeeId) REFERENCES Employee(id)
+);
+```
+
+### 11.2 复杂查询示例
+```java
+// 查询所有员工的完整工资信息
+public List<EmployeePayrollSummary> getAllEmployeePayrollSummary() throws RemoteException {
+    try (Connection conn = DatabaseConnection.getConnection()) {
+        String sql = """
+            SELECT 
+                e.id, e.username, e.firstName, e.lastName, e.role,
+                p.period, p.baseSalary, p.grossPay, p.netPay,
+                (p.grossPay - p.netPay) as totalDeductions
+            FROM Employee e
+            LEFT JOIN Payroll p ON e.id = p.employeeId
+            WHERE p.period = ?
+            ORDER BY e.role, e.lastName
+            """;
+        
+        try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setString(1, java.time.YearMonth.now().toString());
+            ResultSet rs = stmt.executeQuery();
+            
+            List<EmployeePayrollSummary> summaries = new ArrayList<>();
+            while (rs.next()) {
+                EmployeePayrollSummary summary = new EmployeePayrollSummary();
+                summary.setEmployeeId(rs.getInt("id"));
+                summary.setEmployeeName(rs.getString("firstName") + " " + rs.getString("lastName"));
+                summary.setRole(rs.getString("role"));
+                summary.setPeriod(rs.getString("period"));
+                summary.setBaseSalary(rs.getDouble("baseSalary"));
+                summary.setGrossPay(rs.getDouble("grossPay"));
+                summary.setNetPay(rs.getDouble("netPay"));
+                summary.setTotalDeductions(rs.getDouble("totalDeductions"));
+                summaries.add(summary);
+            }
+            return summaries;
+        }
+    }
+}
+```
+
 **核心文件**:
 - `Employee.java` - 可序列化员工模型
 - `Server.java` - RMI服务端启动
 - `EmployeeServiceImpl.java` - 多线程服务实现
 - `PayrollClient.java` - 客户端GUI
+- `DatabaseConnection.java` - 数据库连接管理
+- `EmployeeDAO.java` - 数据访问对象
