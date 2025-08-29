@@ -8,6 +8,9 @@ public class PayrollRecord implements Serializable {
     private int employeeId;
     private String period;
     private double baseSalary;
+    private double overtimeHours;
+    private double overtimeRate;
+    private double bonus;
     private double allowance;
     private double grossPay;
     private double deductions;
@@ -71,5 +74,29 @@ public class PayrollRecord implements Serializable {
 
     public void setNetPay(double netPay) {
         this.netPay = netPay;
+    }
+
+    public double getOvertimeHours() {
+        return overtimeHours;
+    }
+    
+    public void setOvertimeHours(double overtimeHours) {
+        this.overtimeHours = overtimeHours;
+    }
+    
+    public double getOvertimeRate() {
+        return overtimeRate;
+    }
+    
+    public void setOvertimeRate(double overtimeRate) {
+        this.overtimeRate = overtimeRate;
+    }
+    
+    public double getBonus() {
+        return bonus;
+    }
+    
+    public void setBonus(double bonus) {
+        this.bonus = bonus;
     }
 } 

@@ -20,10 +20,11 @@ public class Server {
             try (Connection conn = DatabaseConnection.getConnection();
                  Statement stmt = conn.createStatement()) {
                 stmt.executeUpdate("CREATE TABLE IF NOT EXISTS Employee (id INT AUTO_INCREMENT PRIMARY KEY, username VARCHAR(255) UNIQUE, password VARCHAR(255), firstName VARCHAR(255), lastName VARCHAR(255), icPassport VARCHAR(255), role VARCHAR(255))");
-                stmt.executeUpdate("CREATE TABLE IF NOT EXISTS Payroll (id INT AUTO_INCREMENT PRIMARY KEY, employeeId INT, period VARCHAR(255), baseSalary DOUBLE, allowance DOUBLE, grossPay DOUBLE, deductions DOUBLE, netPay DOUBLE, FOREIGN KEY (employeeId) REFERENCES Employee(id))");
+                stmt.executeUpdate("CREATE TABLE IF NOT EXISTS Payroll (id INT AUTO_INCREMENT PRIMARY KEY, employeeId INT, period VARCHAR(255), baseSalary DOUBLE, overtimeHours DOUBLE, overtimeRate DOUBLE, bonus DOUBLE, allowance DOUBLE, grossPay DOUBLE, deductions DOUBLE, netPay DOUBLE, FOREIGN KEY (employeeId) REFERENCES Employee(id))");
             }
 
-            // 启动 RMI 注册表，使用SSL Socket工厂
+            // 启动 RMI 注册表，使用SSL Socket工厂，绑定到热点IP
+            System.setProperty("java.rmi.server.hostname", "10.101.130.21");
             Registry registry = LocateRegistry.createRegistry(
                 1099,
                 new SslRMIClientSocketFactory(),

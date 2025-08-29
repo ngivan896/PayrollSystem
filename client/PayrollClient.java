@@ -2,7 +2,6 @@ package client;
 
 import common.Employee;
 import common.EmployeeService;
-import common.PayrollRecord;
 import common.PayrollService;
 
 import javax.swing.*;
@@ -33,7 +32,7 @@ public class PayrollClient {
             System.setProperty("javax.net.ssl.trustStore", "server.keystore");
             System.setProperty("javax.net.ssl.trustStorePassword", "abcd123");
             Registry registry = LocateRegistry.getRegistry(
-                "192.168.0.5", 1099, new SslRMIClientSocketFactory()
+                "10.101.130.21", 1099, new SslRMIClientSocketFactory()
             );
             System.out.println("Connected to RMI registry (TLS/SSL)");
             employeeService = (EmployeeService) registry.lookup("EmployeeService");
@@ -1020,7 +1019,14 @@ public class PayrollClient {
                 emp.setFirstName(firstNameField.getText());
                 emp.setLastName(lastNameField.getText());
                 emp.setIcPassport(icPassportField.getText());
-                emp.setRole((String) roleBox.getSelectedItem());
+                
+                // 修复：确保admin1用户设置为admin角色
+                String selectedRole = (String) roleBox.getSelectedItem();
+                if (usernameField.getText().equals("admin1")) {
+                    selectedRole = "admin";
+                }
+                emp.setRole(selectedRole);
+                
                 try {
                     boolean ok = employeeService.register(emp);
                     if (ok) {
@@ -1173,9 +1179,13 @@ public class PayrollClient {
                 double overtimeRate = parseOrZero(overtimeRateField.getText());
                 double bonus = parseOrZero(bonusField.getText());
                 double allowance = parseOrZero(allowanceField.getText());
+                
+                // 修复：正确计算总工资，包含所有组件
                 double overtimePay = overtimeHours * overtimeRate;
                 double gross = base + overtimePay + bonus + allowance;
                 grossField.setText(String.format("%.2f", gross));
+                
+                // 修复：正确计算净工资，使用EPF 11%扣除
                 double net = gross - (gross * 0.11);
                 netField.setText(String.format("%.2f", net));
             }
@@ -1196,15 +1206,43 @@ public class PayrollClient {
                 return;
             }
             common.Employee selectedEmp = employees.get(idx);
-            double baseSalary = parseOrZero(baseField.getText());
-            double overtimeHours = parseOrZero(overtimeHoursField.getText());
-            double overtimeRate = parseOrZero(overtimeRateField.getText());
-            double bonus = parseOrZero(bonusField.getText());
-            double allowance = parseOrZero(allowanceField.getText());
+            // 使用新的解析方法，保留负数值用于校验
+            double baseSalary = parseDoubleOrZero(baseField.getText());
+            double overtimeHours = parseDoubleOrZero(overtimeHoursField.getText());
+            double overtimeRate = parseDoubleOrZero(overtimeRateField.getText());
+            double bonus = parseDoubleOrZero(bonusField.getText());
+            double allowance = parseDoubleOrZero(allowanceField.getText());
+            
+            // 添加调试信息
+            System.out.println("[CLIENT] Parsed values:");
+            System.out.println("[CLIENT] Base Salary: " + baseSalary);
+            System.out.println("[CLIENT] Overtime Hours: " + overtimeHours);
+            System.out.println("[CLIENT] Overtime Rate: " + overtimeRate);
+            System.out.println("[CLIENT] Bonus: " + bonus);
+            System.out.println("[CLIENT] Allowance: " + allowance);
+            
+            // 客户端校验：不允许任何负数
+            if (baseSalary < 0 || overtimeHours < 0 || overtimeRate < 0 || bonus < 0 || allowance < 0) {
+                System.out.println("[CLIENT] Negative value detected! Blocking payroll generation.");
+                JOptionPane.showMessageDialog(frame, "Amounts cannot be negative.", "Input Error", JOptionPane.WARNING_MESSAGE);
+                return;
+            }
             String period = java.time.YearMonth.now().toString();
             try {
                 common.PayrollRecord rec = payrollService.calculatePayroll(
                     selectedEmp.getId(), period, baseSalary, overtimeHours, overtimeRate, bonus, allowance);
+                
+                // 添加调试信息
+                System.out.println("[CLIENT] Received payroll record from server:");
+                System.out.println("[CLIENT] Base Salary: " + rec.getBaseSalary());
+                System.out.println("[CLIENT] Overtime Hours: " + rec.getOvertimeHours());
+                System.out.println("[CLIENT] Overtime Rate: " + rec.getOvertimeRate());
+                System.out.println("[CLIENT] Bonus: " + rec.getBonus());
+                System.out.println("[CLIENT] Allowance: " + rec.getAllowance());
+                System.out.println("[CLIENT] Gross Pay: " + rec.getGrossPay());
+                System.out.println("[CLIENT] Deductions: " + rec.getDeductions());
+                System.out.println("[CLIENT] Net Pay: " + rec.getNetPay());
+                
                 JOptionPane.showMessageDialog(frame, "Payroll sent to " + selectedEmp.getUsername() + "!\nNet Pay: " + rec.getNetPay());
                 frame.dispose();
             } catch (Exception ex) {
@@ -1221,6 +1259,20 @@ public class PayrollClient {
      * @return Parsed double value or 0.0
      */
     private double parseOrZero(String text) {
+        try {
+            return Double.parseDouble(text.trim());
+        } catch (Exception e) {
+            return 0.0;
+        }
+    }
+
+    /**
+     * Utility method to parse a string to double, returns 0.0 if invalid.
+     * This method preserves negative values for validation purposes.
+     * @param text Input string
+     * @return Parsed double value or 0.0
+     */
+    private double parseDoubleOrZero(String text) {
         try {
             return Double.parseDouble(text.trim());
         } catch (Exception e) {

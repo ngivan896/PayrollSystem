@@ -7,16 +7,19 @@ import java.util.List;
 
 public class PayrollDAO {
     public boolean insert(PayrollRecord record) {
-        String sql = "INSERT INTO Payroll (employeeId, period, baseSalary, allowance, grossPay, deductions, netPay) VALUES (?, ?, ?, ?, ?, ?, ?)";
+        String sql = "INSERT INTO Payroll (employeeId, period, baseSalary, overtimeHours, overtimeRate, bonus, allowance, grossPay, deductions, netPay) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
         try (Connection conn = DatabaseConnection.getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
             stmt.setInt(1, record.getEmployeeId());
             stmt.setString(2, record.getPeriod());
             stmt.setDouble(3, record.getBaseSalary());
-            stmt.setDouble(4, record.getAllowance());
-            stmt.setDouble(5, record.getGrossPay());
-            stmt.setDouble(6, record.getDeductions());
-            stmt.setDouble(7, record.getNetPay());
+            stmt.setDouble(4, record.getOvertimeHours());
+            stmt.setDouble(5, record.getOvertimeRate());
+            stmt.setDouble(6, record.getBonus());
+            stmt.setDouble(7, record.getAllowance());
+            stmt.setDouble(8, record.getGrossPay());
+            stmt.setDouble(9, record.getDeductions());
+            stmt.setDouble(10, record.getNetPay());
             return stmt.executeUpdate() > 0;
         } catch (SQLException e) {
             e.printStackTrace();
@@ -37,6 +40,9 @@ public class PayrollDAO {
                 record.setEmployeeId(rs.getInt("employeeId"));
                 record.setPeriod(rs.getString("period"));
                 record.setBaseSalary(rs.getDouble("baseSalary"));
+                record.setOvertimeHours(rs.getDouble("overtimeHours"));
+                record.setOvertimeRate(rs.getDouble("overtimeRate"));
+                record.setBonus(rs.getDouble("bonus"));
                 record.setAllowance(rs.getDouble("allowance"));
                 record.setGrossPay(rs.getDouble("grossPay"));
                 record.setDeductions(rs.getDouble("deductions"));
@@ -61,6 +67,9 @@ public class PayrollDAO {
                 record.setEmployeeId(rs.getInt("employeeId"));
                 record.setPeriod(rs.getString("period"));
                 record.setBaseSalary(rs.getDouble("baseSalary"));
+                record.setOvertimeHours(rs.getDouble("overtimeHours"));
+                record.setOvertimeRate(rs.getDouble("overtimeRate"));
+                record.setBonus(rs.getDouble("bonus"));
                 record.setAllowance(rs.getDouble("allowance"));
                 record.setGrossPay(rs.getDouble("grossPay"));
                 record.setDeductions(rs.getDouble("deductions"));
