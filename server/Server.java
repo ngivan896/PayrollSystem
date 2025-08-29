@@ -5,17 +5,10 @@ import java.rmi.registry.Registry;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.sql.Statement;
-import javax.rmi.ssl.SslRMIClientSocketFactory;
-import javax.rmi.ssl.SslRMIServerSocketFactory;
 
 public class Server {
     public static void main(String[] args) {
         try {
-            // TLS/SSL 配置（请确保 server.keystore 文件已生成，并密码正确）
-            System.setProperty("javax.net.ssl.keyStore", "server.keystore");
-            System.setProperty("javax.net.ssl.keyStorePassword", "abcd123");
-            System.setProperty("javax.net.ssl.trustStore", "server.keystore");
-            System.setProperty("javax.net.ssl.trustStorePassword", "abcd123");
             // 初始化数据库表
             try (Connection conn = DatabaseConnection.getConnection();
                  Statement stmt = conn.createStatement()) {
@@ -23,17 +16,14 @@ public class Server {
                 stmt.executeUpdate("CREATE TABLE IF NOT EXISTS Payroll (id INT AUTO_INCREMENT PRIMARY KEY, employeeId INT, period VARCHAR(255), baseSalary DOUBLE, overtimeHours DOUBLE, overtimeRate DOUBLE, bonus DOUBLE, allowance DOUBLE, grossPay DOUBLE, deductions DOUBLE, netPay DOUBLE, FOREIGN KEY (employeeId) REFERENCES Employee(id))");
             }
 
-            // 启动 RMI 注册表，使用SSL Socket工厂，绑定到热点IP
-            System.setProperty("java.rmi.server.hostname", "10.101.130.21");
-            Registry registry = LocateRegistry.createRegistry(
-                1099,
-                new SslRMIClientSocketFactory(),
-                new SslRMIServerSocketFactory()
-            );
+            // 启动纯RMI注册表，完全禁用SSL
+            System.setProperty("java.rmi.server.hostname", "0.0.0.0");
+            Registry registry = LocateRegistry.createRegistry(1099);
             registry.rebind("EmployeeService", new EmployeeServiceImpl());
             registry.rebind("PayrollService", new PayrollServiceImpl());
 
-            System.out.println("Server started. RMI services bound with TLS/SSL.");
+            System.out.println("Server started. Pure RMI (No SSL).");
+            System.out.println("Listening on port 1099 for all network interfaces.");
         } catch (SQLException e) {
             e.printStackTrace();
         } catch (Exception e) {

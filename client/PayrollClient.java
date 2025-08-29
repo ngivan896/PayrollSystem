@@ -10,7 +10,6 @@ import java.awt.event.ActionEvent;
 import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
 import javax.swing.border.EmptyBorder;
-import javax.rmi.ssl.SslRMIClientSocketFactory;
 
 /**
  * PayrollClient is the main client application for the Payroll System.
@@ -28,13 +27,9 @@ public class PayrollClient {
             System.err.println("Failed to set system look and feel");
         }
         try {
-            // TLS/SSL 配置（请确保 server.keystore 文件已复制到客户端，并密码正确）
-            System.setProperty("javax.net.ssl.trustStore", "server.keystore");
-            System.setProperty("javax.net.ssl.trustStorePassword", "abcd123");
-            Registry registry = LocateRegistry.getRegistry(
-                "10.101.130.21", 1099, new SslRMIClientSocketFactory()
-            );
-            System.out.println("Connected to RMI registry (TLS/SSL)");
+            // 纯RMI连接，完全禁用SSL
+            Registry registry = LocateRegistry.getRegistry("172.20.10.2", 1099);
+            System.out.println("Connected to RMI registry (Pure RMI, No SSL)");
             employeeService = (EmployeeService) registry.lookup("EmployeeService");
             System.out.println("EmployeeService lookup success");
             payrollService = (PayrollService) registry.lookup("PayrollService");
